@@ -12,6 +12,7 @@ const state = struct {
 };
 
 var showDemoWindow = true;
+var showFullPaths = false;
 
 export fn init() void {
     // initialize sokol-gfx
@@ -47,14 +48,15 @@ export fn frame() void {
 
     const vec2Zero = std.mem.zeroes(ig.ImVec2);
 
-    {
-        ig.igShowDemoWindow(&showDemoWindow);
-        defer ig.igEnd();
+    ig.igShowDemoWindow(&showDemoWindow);
 
+    {
         ig.igSetNextWindowPos(.{ .x = 10, .y = 10 }, ig.ImGuiCond_Once, vec2Zero);
         ig.igSetNextWindowSize(.{ .x = 400, .y = 100 }, ig.ImGuiCond_Once);
         _ = ig.igBegin("Hello Dear ImGui!", 0, ig.ImGuiWindowFlags_None);
-        _ = ig.igColorEdit3("Background", &state.pass_action.colors[0].clear_value.r, ig.ImGuiColorEditFlags_None);
+        defer ig.igEnd();
+
+        //_ = ig.igColorEdit3("Background", &state.pass_action.colors[0].clear_value.r, ig.ImGuiColorEditFlags_None);
 
         {
             _ = ig.igBeginTable("carmapstable", 2, 0, vec2Zero, 0);
@@ -78,6 +80,12 @@ export fn frame() void {
                 _ = ig.igSelectable_Bool("some map", false, 0, vec2Zero);
                 ig.igEndListBox();
             }
+        }
+
+        _ = ig.igCheckbox("Show full paths", &showFullPaths);
+
+        if (ig.igButton("Launch!", .{ .x = -std.math.floatMin(f32), .y = 0 })) {
+            std.log.info("Boom!", .{});
         }
     }
 
