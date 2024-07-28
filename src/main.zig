@@ -29,6 +29,9 @@ export fn init() void {
         .load_action = .CLEAR,
         .clear_value = .{ .r = 0.0, .g = 0.5, .b = 1.0, .a = 1.0 },
     };
+
+    const io: *ig.ImGuiIO = ig.igGetIO();
+    io.FontGlobalScale = 2;
 }
 
 export fn frame() void {
@@ -42,14 +45,41 @@ export fn frame() void {
 
     //=== UI CODE STARTS HERE
 
-    ig.igShowDemoWindow(&showDemoWindow);
+    const vec2Zero = std.mem.zeroes(ig.ImVec2);
 
-    ig.igSetNextWindowPos(.{ .x = 10, .y = 10 }, ig.ImGuiCond_Once, .{ .x = 0, .y = 0 });
-    ig.igSetNextWindowSize(.{ .x = 400, .y = 100 }, ig.ImGuiCond_Once);
-    _ = ig.igBegin("Hello Dear ImGui!", 0, ig.ImGuiWindowFlags_None);
-    _ = ig.igColorEdit3("Background", &state.pass_action.colors[0].clear_value.r, ig.ImGuiColorEditFlags_None);
-    ig.igText("Poof %i %s", @as(i32, 10), "nesto nesto");
-    ig.igEnd();
+    {
+        ig.igShowDemoWindow(&showDemoWindow);
+        defer ig.igEnd();
+
+        ig.igSetNextWindowPos(.{ .x = 10, .y = 10 }, ig.ImGuiCond_Once, vec2Zero);
+        ig.igSetNextWindowSize(.{ .x = 400, .y = 100 }, ig.ImGuiCond_Once);
+        _ = ig.igBegin("Hello Dear ImGui!", 0, ig.ImGuiWindowFlags_None);
+        _ = ig.igColorEdit3("Background", &state.pass_action.colors[0].clear_value.r, ig.ImGuiColorEditFlags_None);
+
+        {
+            _ = ig.igBeginTable("carmapstable", 2, 0, vec2Zero, 0);
+            defer ig.igEndTable();
+
+            ig.igTableNextRow(0, 0);
+            _ = ig.igTableSetColumnIndex(0);
+
+            const listBoxWidth = -std.math.floatMin(f32);
+            const listBoxHeight = 10 * ig.igGetTextLineHeightWithSpacing();
+            const size: ig.ImVec2 = .{ .x = listBoxWidth, .y = listBoxHeight };
+
+            if (ig.igBeginListBox("##cars", size)) {
+                _ = ig.igSelectable_Bool("label: [*c]const u8", false, 0, vec2Zero);
+                ig.igEndListBox();
+            }
+
+            _ = ig.igTableSetColumnIndex(1);
+
+            if (ig.igBeginListBox("##maps", size)) {
+                _ = ig.igSelectable_Bool("some map", false, 0, vec2Zero);
+                ig.igEndListBox();
+            }
+        }
+    }
 
     //=== UI CODE ENDS HERE
 
