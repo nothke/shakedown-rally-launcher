@@ -23,6 +23,9 @@ const ItemList = std.ArrayList(Item);
 var carList: ItemList = undefined;
 var mapList: ItemList = undefined;
 
+var cari: i32 = -1;
+var mapi: i32 = -1;
+
 var showDemoWindow = true;
 var showFullPaths = false;
 
@@ -117,8 +120,6 @@ export fn frame() void {
         _ = ig.igBegin("Hello Dear ImGui!", 0, windowFlags);
         defer ig.igEnd();
 
-        //_ = ig.igColorEdit3("Background", &state.pass_action.colors[0].clear_value.r, ig.ImGuiColorEditFlags_None);
-
         {
             _ = ig.igBeginTable("carmapstable", 2, 0, vec2Zero, 0);
             defer ig.igEndTable();
@@ -131,12 +132,12 @@ export fn frame() void {
             const size: ig.ImVec2 = .{ .x = listBoxWidth, .y = listBoxHeight };
 
             ig.igSeparatorText("Cars");
-            drawListBox("##cars", carList, size);
+            drawListBox("##cars", carList, size, &cari);
 
             _ = ig.igTableSetColumnIndex(1);
 
             ig.igSeparatorText("Maps");
-            drawListBox("##maps", mapList, size);
+            drawListBox("##maps", mapList, size, &mapi);
         }
 
         _ = ig.igCheckbox("Show full paths", &showFullPaths);
@@ -155,10 +156,15 @@ export fn frame() void {
     sg.commit();
 }
 
-fn drawListBox(id: [:0]const u8, list: ItemList, size: ig.ImVec2) void {
+fn drawListBox(id: [:0]const u8, list: ItemList, size: ig.ImVec2, index: *i32) void {
     if (ig.igBeginListBox(id, size)) {
-        for (list.items) |item| {
-            _ = ig.igSelectable_Bool(if (showFullPaths) item.path else item.name, false, 0, vec2Zero);
+        for (list.items, 0..) |item, i| {
+            const isSelected = i == index.*;
+            const label = if (showFullPaths) item.path else item.name;
+            const shouldBeSelected = ig.igSelectable_Bool(label, isSelected, 0, vec2Zero);
+
+            if (shouldBeSelected)
+                index.* = @intCast(i);
         }
 
         ig.igEndListBox();
