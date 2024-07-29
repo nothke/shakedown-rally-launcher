@@ -164,16 +164,12 @@ fn launch() !void {
 
     // NEngine-drive.exe -car "cars/spec17/spec17_gravel.car.ini" -map "maps/finland/finland.map.ini"
 
-    var charList = std.ArrayList(u8).init(alloc);
-    defer charList.deinit();
+    const str = try std.fmt.allocPrint(alloc, "NEngine-drive.exe -car \"{s}\" -map \"{s}\"", .{
+        carList.items[@intCast(cari)].path,
+        mapList.items[@intCast(mapi)].path,
+    });
 
-    try charList.appendSlice("NEngine-drive.exe -car \"");
-    try charList.appendSlice(carList.items[@intCast(cari)].path);
-    try charList.appendSlice("\" -map \"");
-    try charList.appendSlice(mapList.items[@intCast(mapi)].path);
-    try charList.append('\"');
-
-    std.log.info("Launching a process with args: {s}", .{charList.items});
+    std.log.info("Launching: {s}", .{str});
 }
 
 fn drawListBox(id: [:0]const u8, list: ItemList, size: ig.ImVec2, index: *i32) void {
