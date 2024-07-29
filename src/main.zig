@@ -92,7 +92,7 @@ export fn frame() void {
         .width = sapp.width(),
         .height = sapp.height(),
         .delta_time = sapp.frameDuration(),
-        .dpi_scale = sapp.dpiScale(),
+        .dpi_scale = 1,
     });
 
     //=== UI CODE STARTS HERE
@@ -190,5 +190,6 @@ pub fn main() void {
         .height = 600,
         .icon = .{ .sokol_default = true },
         .logger = .{ .func = slog.func },
+        .high_dpi = true,
     });
 }
