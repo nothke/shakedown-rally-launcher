@@ -143,7 +143,7 @@ export fn frame() void {
         _ = ig.igCheckbox("Show full paths", &showFullPaths);
 
         if (ig.igButton("Launch!", .{ .x = -std.math.floatMin(f32), .y = 0 })) {
-            std.log.info("Boom!", .{});
+            launch() catch unreachable;
         }
     }
 
@@ -154,6 +154,26 @@ export fn frame() void {
     simgui.render();
     sg.endPass();
     sg.commit();
+}
+
+fn launch() !void {
+    if (cari < 0 or mapi < 0) {
+        std.log.info("Car or map are not selected!", .{});
+        return;
+    }
+
+    // NEngine-drive.exe -car "cars/spec17/spec17_gravel.car.ini" -map "maps/finland/finland.map.ini"
+
+    var charList = std.ArrayList(u8).init(alloc);
+    defer charList.deinit();
+
+    try charList.appendSlice("NEngine-drive.exe -car \"");
+    try charList.appendSlice(carList.items[@intCast(cari)].path);
+    try charList.appendSlice("\" -map \"");
+    try charList.appendSlice(mapList.items[@intCast(mapi)].path);
+    try charList.append('\"');
+
+    std.log.info("Launching a process with args: {s}", .{charList.items});
 }
 
 fn drawListBox(id: [:0]const u8, list: ItemList, size: ig.ImVec2, index: *i32) void {
