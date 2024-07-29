@@ -50,7 +50,11 @@ export fn init() void {
     defer walker.deinit();
 
     while (walker.next() catch unreachable) |entry| {
-        std.log.info("Entry: path: {s}, basename: {s}, {}", .{ entry.path, entry.basename, entry.kind });
+        if (entry.kind == .file) {
+            if (std.mem.endsWith(u8, entry.path, ".car.ini")) {
+                std.log.info("Entry: path: {s}, basename: {s}, {}", .{ entry.path, entry.basename, entry.kind });
+            }
+        }
     }
 }
 
