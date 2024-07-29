@@ -1,13 +1,7 @@
-# sokol-zig-imgui-sample
+# Shakedown Rally Launcher
 
-[![build](https://github.com/floooh/sokol-zig-imgui-sample/actions/workflows/main.yml/badge.svg)](https://github.com/floooh/sokol-zig-imgui-sample/actions/workflows/main.yml)
+Just a small car and map loader for Shakedown since it doesn't have in-game switching of cars and maps yet.
 
-Sample project for using Dear ImGui with the Sokol Zig bindings.
+Uses Sokol Zig and Dear ImGui. Based on the [sokol imgui sample](https://github.com/floooh/sokol-zig-imgui-sample) repo.
 
-On macOS, Windows and Linux just run:
-
-`zig build run`
-
-To build and run the web version:
-
-`zig build --release=small -Dtarget=wasm32-emscripten run`
+To build just run `zig build run`. Built with zig 0.13.0
