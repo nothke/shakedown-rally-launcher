@@ -33,6 +33,19 @@ export fn init() void {
 
     const io: *ig.ImGuiIO = ig.igGetIO();
     io.FontGlobalScale = 2;
+
+    const resPath = "res/";
+
+    const dir = std.fs.cwd().openDir(resPath, .{ .iterate = true }) catch |err| switch (err) {
+        error.FileNotFound => @panic("Resource folder " ++ resPath ++ " not found"),
+        else => unreachable,
+    };
+
+    var iter = dir.iterate();
+
+    while (iter.next() catch unreachable) |entry| {
+        std.log.info("entry: {s}", .{entry.name});
+    }
 }
 
 export fn frame() void {

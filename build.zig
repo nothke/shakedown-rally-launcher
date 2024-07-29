@@ -58,7 +58,8 @@ fn buildNative(b: *Build, target: ResolvedTarget, optimize: OptimizeMode, dep_so
     check.dependOn(&exe_check.step);
 
     b.installArtifact(demo);
-    b.step("run", "Run demo").dependOn(&b.addRunArtifact(demo).step);
+    var runStep = b.step("run", "Run demo");
+    runStep.dependOn(&b.addRunArtifact(demo).step);
 }
 
 fn buildWasm(b: *Build, target: ResolvedTarget, optimize: OptimizeMode, dep_sokol: *Dependency, dep_cimgui: *Dependency) !void {
