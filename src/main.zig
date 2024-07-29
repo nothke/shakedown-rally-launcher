@@ -7,6 +7,8 @@ const sglue = sokol.glue;
 const simgui = sokol.imgui;
 const std = @import("std");
 
+const vec2Zero = std.mem.zeroes(ig.ImVec2);
+
 const state = struct {
     var pass_action: sg.PassAction = .{};
 };
@@ -16,8 +18,10 @@ const Item = struct {
     name: [:0]const u8,
 };
 
-var carList: std.ArrayList(Item) = undefined;
-var mapList: std.ArrayList(Item) = undefined;
+const ItemList = std.ArrayList(Item);
+
+var carList: ItemList = undefined;
+var mapList: ItemList = undefined;
 
 var showDemoWindow = true;
 var showFullPaths = false;
@@ -49,8 +53,8 @@ export fn init() void {
 }
 
 fn findFiles() !void {
-    carList = std.ArrayList(Item).init(alloc);
-    mapList = std.ArrayList(Item).init(alloc);
+    carList = ItemList.init(alloc);
+    mapList = ItemList.init(alloc);
 
     const resPath = "res/";
 
@@ -60,29 +64,30 @@ fn findFiles() !void {
     };
     defer dir.close();
 
-    var walker = try dir.walk(alloc);
-    defer walker.deinit();
-
-    const carExt = ".car.ini";
-    const mapExt = ".map.ini";
-    _ = mapExt; // autofix
-
-    while (try walker.next()) |entry| {
-        if (entry.kind == .file) {
-            if (std.mem.endsWith(u8, entry.path, carExt)) {
-                std.log.info("Entry: path: {s}, basename: {s}, {}", .{ entry.path, entry.basename, entry.kind });
-                try carList.append(.{
-                    .name = try alloc.dupeZ(u8, entry.basename[0 .. entry.basename.len - carExt.len]),
-                    .path = try alloc.dupeZ(u8, entry.path),
-                });
-            }
-        }
-    }
+    try loadFiles(".car.ini", dir, &carList);
+    try loadFiles(".map.ini", dir, &mapList);
 
     std.log.info("-- Ended walking --", .{});
 
     for (carList.items) |item| {
         std.log.info("name: {s}, ---- full path: {s}", .{ item.name, item.path });
+    }
+}
+
+fn loadFiles(ext: []const u8, dir: std.fs.Dir, list: *ItemList) !void {
+    var walker = try dir.walk(alloc);
+    defer walker.deinit();
+
+    while (try walker.next()) |entry| {
+        if (entry.kind == .file) {
+            if (std.mem.endsWith(u8, entry.path, ext)) {
+                std.log.info("Entry: path: {s}, basename: {s}, {}", .{ entry.path, entry.basename, entry.kind });
+                try list.append(.{
+                    .name = try alloc.dupeZ(u8, entry.basename[0 .. entry.basename.len - ext.len]),
+                    .path = try alloc.dupeZ(u8, entry.path),
+                });
+            }
+        }
     }
 }
 
@@ -96,8 +101,6 @@ export fn frame() void {
     });
 
     //=== UI CODE STARTS HERE
-
-    const vec2Zero = std.mem.zeroes(ig.ImVec2);
 
     ig.igShowDemoWindow(&showDemoWindow);
 
@@ -127,20 +130,13 @@ export fn frame() void {
             const listBoxHeight = 10 * ig.igGetTextLineHeightWithSpacing();
             const size: ig.ImVec2 = .{ .x = listBoxWidth, .y = listBoxHeight };
 
-            if (ig.igBeginListBox("##cars", size)) {
-                for (carList.items) |item| {
-                    _ = ig.igSelectable_Bool(item.name.ptr, false, 0, vec2Zero);
-                }
-
-                ig.igEndListBox();
-            }
+            ig.igSeparatorText("Cars");
+            drawListBox("##cars", carList, size);
 
             _ = ig.igTableSetColumnIndex(1);
 
-            if (ig.igBeginListBox("##maps", size)) {
-                _ = ig.igSelectable_Bool("some map", false, 0, vec2Zero);
-                ig.igEndListBox();
-            }
+            ig.igSeparatorText("Maps");
+            drawListBox("##maps", mapList, size);
         }
 
         _ = ig.igCheckbox("Show full paths", &showFullPaths);
@@ -159,11 +155,26 @@ export fn frame() void {
     sg.commit();
 }
 
+fn drawListBox(id: [:0]const u8, list: ItemList, size: ig.ImVec2) void {
+    if (ig.igBeginListBox(id, size)) {
+        for (list.items) |item| {
+            _ = ig.igSelectable_Bool(if (showFullPaths) item.path else item.name, false, 0, vec2Zero);
+        }
+
+        ig.igEndListBox();
+    }
+}
+
 export fn cleanup() void {
     simgui.shutdown();
     sg.shutdown();
 
     for (carList.items) |item| {
+        alloc.free(item.name);
+        alloc.free(item.path);
+    }
+
+    for (mapList.items) |item| {
         alloc.free(item.name);
         alloc.free(item.path);
     }
