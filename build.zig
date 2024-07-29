@@ -42,7 +42,8 @@ fn buildNative(b: *Build, target: ResolvedTarget, optimize: OptimizeMode, dep_so
     demo.root_module.addImport("sokol", dep_sokol.module("sokol"));
     demo.root_module.addImport("cimgui", dep_cimgui.module("cimgui"));
 
-    //demo.subsystem = .Windows;
+    if (optimize != .Debug)
+        demo.subsystem = .Windows;
 
     const exe_check = b.addExecutable(.{
         .name = "check_step",
