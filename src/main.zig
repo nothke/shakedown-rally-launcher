@@ -50,10 +50,17 @@ export fn frame() void {
 
     ig.igShowDemoWindow(&showDemoWindow);
 
+    const windowFlags =
+        ig.ImGuiWindowFlags_NoMove |
+        ig.ImGuiWindowFlags_NoResize |
+        ig.ImGuiWindowFlags_NoCollapse |
+        ig.ImGuiWindowFlags_NoTitleBar;
+
+    const io: *ig.ImGuiIO = ig.igGetIO();
     {
-        ig.igSetNextWindowPos(.{ .x = 10, .y = 10 }, ig.ImGuiCond_Once, vec2Zero);
-        ig.igSetNextWindowSize(.{ .x = 400, .y = 100 }, ig.ImGuiCond_Once);
-        _ = ig.igBegin("Hello Dear ImGui!", 0, ig.ImGuiWindowFlags_None);
+        ig.igSetNextWindowPos(vec2Zero, ig.ImGuiCond_Once, vec2Zero);
+        ig.igSetNextWindowSize(io.DisplaySize, ig.ImGuiCond_Always);
+        _ = ig.igBegin("Hello Dear ImGui!", 0, windowFlags);
         defer ig.igEnd();
 
         //_ = ig.igColorEdit3("Background", &state.pass_action.colors[0].clear_value.r, ig.ImGuiColorEditFlags_None);
