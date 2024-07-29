@@ -11,8 +11,19 @@ const state = struct {
     var pass_action: sg.PassAction = .{};
 };
 
+const Item = struct {
+    path: [:0]const u8,
+    name: [:0]const u8,
+};
+
+var carList: std.ArrayList(Item) = undefined;
+var mapList: std.ArrayList(Item) = undefined;
+
 var showDemoWindow = true;
 var showFullPaths = false;
+
+var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+const alloc = gpa.allocator();
 
 export fn init() void {
     // initialize sokol-gfx
@@ -38,6 +49,9 @@ export fn init() void {
 }
 
 fn findFiles() !void {
+    carList = std.ArrayList(Item).init(alloc);
+    mapList = std.ArrayList(Item).init(alloc);
+
     const resPath = "res/";
 
     var dir = std.fs.cwd().openDir(resPath, .{ .iterate = true }) catch |err| switch (err) {
@@ -46,33 +60,29 @@ fn findFiles() !void {
     };
     defer dir.close();
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const alloc = gpa.allocator();
-    defer _ = gpa.deinit();
-
     var walker = try dir.walk(alloc);
     defer walker.deinit();
 
-    var carList = try std.ArrayList([]const u8).initCapacity(alloc, 32);
-    defer carList.deinit();
+    const carExt = ".car.ini";
+    const mapExt = ".map.ini";
+    _ = mapExt; // autofix
 
     while (try walker.next()) |entry| {
         if (entry.kind == .file) {
-            if (std.mem.endsWith(u8, entry.path, ".car.ini")) {
+            if (std.mem.endsWith(u8, entry.path, carExt)) {
                 std.log.info("Entry: path: {s}, basename: {s}, {}", .{ entry.path, entry.basename, entry.kind });
-                try carList.append(try alloc.dupe(u8, entry.path));
+                try carList.append(.{
+                    .name = try alloc.dupeZ(u8, entry.basename[0 .. entry.basename.len - carExt.len]),
+                    .path = try alloc.dupeZ(u8, entry.path),
+                });
             }
         }
     }
 
     std.log.info("-- Ended walking --", .{});
 
-    for (carList.items) |path| {
-        std.log.info("paths: {s}", .{path});
-    }
-
-    for (carList.items) |path| {
-        alloc.free(path);
+    for (carList.items) |item| {
+        std.log.info("name: {s}, ---- full path: {s}", .{ item.name, item.path });
     }
 }
 
@@ -118,7 +128,10 @@ export fn frame() void {
             const size: ig.ImVec2 = .{ .x = listBoxWidth, .y = listBoxHeight };
 
             if (ig.igBeginListBox("##cars", size)) {
-                _ = ig.igSelectable_Bool("label: [*c]const u8", false, 0, vec2Zero);
+                for (carList.items) |item| {
+                    _ = ig.igSelectable_Bool(item.name.ptr, false, 0, vec2Zero);
+                }
+
                 ig.igEndListBox();
             }
 
@@ -149,6 +162,16 @@ export fn frame() void {
 export fn cleanup() void {
     simgui.shutdown();
     sg.shutdown();
+
+    for (carList.items) |item| {
+        alloc.free(item.name);
+        alloc.free(item.path);
+    }
+
+    carList.deinit();
+    mapList.deinit();
+
+    _ = gpa.deinit();
 }
 
 export fn event(ev: [*c]const sapp.Event) void {
