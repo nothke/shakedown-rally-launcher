@@ -34,11 +34,15 @@ export fn init() void {
     const io: *ig.ImGuiIO = ig.igGetIO();
     io.FontGlobalScale = 2;
 
+    findFiles() catch unreachable;
+}
+
+fn findFiles() !void {
     const resPath = "res/";
 
     var dir = std.fs.cwd().openDir(resPath, .{ .iterate = true }) catch |err| switch (err) {
         error.FileNotFound => @panic("Resource folder " ++ resPath ++ " not found"),
-        else => unreachable,
+        else => return err,
     };
     defer dir.close();
 
@@ -46,15 +50,29 @@ export fn init() void {
     const alloc = gpa.allocator();
     defer _ = gpa.deinit();
 
-    var walker = dir.walk(alloc) catch unreachable;
+    var walker = try dir.walk(alloc);
     defer walker.deinit();
 
-    while (walker.next() catch unreachable) |entry| {
+    var carList = try std.ArrayList([]const u8).initCapacity(alloc, 32);
+    defer carList.deinit();
+
+    while (try walker.next()) |entry| {
         if (entry.kind == .file) {
             if (std.mem.endsWith(u8, entry.path, ".car.ini")) {
                 std.log.info("Entry: path: {s}, basename: {s}, {}", .{ entry.path, entry.basename, entry.kind });
+                try carList.append(try alloc.dupe(u8, entry.path));
             }
         }
+    }
+
+    std.log.info("-- Ended walking --", .{});
+
+    for (carList.items) |path| {
+        std.log.info("paths: {s}", .{path});
+    }
+
+    for (carList.items) |path| {
+        alloc.free(path);
     }
 }
 
