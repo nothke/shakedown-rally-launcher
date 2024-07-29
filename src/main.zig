@@ -36,15 +36,21 @@ export fn init() void {
 
     const resPath = "res/";
 
-    const dir = std.fs.cwd().openDir(resPath, .{ .iterate = true }) catch |err| switch (err) {
+    var dir = std.fs.cwd().openDir(resPath, .{ .iterate = true }) catch |err| switch (err) {
         error.FileNotFound => @panic("Resource folder " ++ resPath ++ " not found"),
         else => unreachable,
     };
+    defer dir.close();
 
-    var iter = dir.iterate();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const alloc = gpa.allocator();
+    defer _ = gpa.deinit();
 
-    while (iter.next() catch unreachable) |entry| {
-        std.log.info("entry: {s}", .{entry.name});
+    var walker = dir.walk(alloc) catch unreachable;
+    defer walker.deinit();
+
+    while (walker.next() catch unreachable) |entry| {
+        std.log.info("Entry: path: {s}, basename: {s}, {}", .{ entry.path, entry.basename, entry.kind });
     }
 }
 
