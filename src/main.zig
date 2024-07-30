@@ -105,15 +105,18 @@ export fn frame() void {
 
     //=== UI CODE STARTS HERE
 
-    ig.igShowDemoWindow(&showDemoWindow);
-
     const windowFlags =
         ig.ImGuiWindowFlags_NoMove |
         ig.ImGuiWindowFlags_NoResize |
         ig.ImGuiWindowFlags_NoCollapse |
-        ig.ImGuiWindowFlags_NoTitleBar;
+        ig.ImGuiWindowFlags_NoTitleBar |
+        ig.ImGuiWindowFlags_NoSavedSettings;
 
     const io: *ig.ImGuiIO = ig.igGetIO();
+    const style: *ig.ImGuiStyle = ig.igGetStyle();
+    const borderSize = style.WindowPadding.y;
+    const spacingSize = style.ItemSpacing.y;
+
     {
         ig.igSetNextWindowPos(vec2Zero, ig.ImGuiCond_Once, vec2Zero);
         ig.igSetNextWindowSize(io.DisplaySize, ig.ImGuiCond_Always);
@@ -128,7 +131,15 @@ export fn frame() void {
             _ = ig.igTableSetColumnIndex(0);
 
             const listBoxWidth = -std.math.floatMin(f32);
-            const listBoxHeight = 10 * ig.igGetTextLineHeightWithSpacing();
+
+            // header - 1
+            // LISTBOX
+            // checkbox - 1
+            // button - 1
+            std.log.info("{}", .{borderSize});
+            const allElementsHeight = 4 * ig.igGetTextLineHeightWithSpacing() + borderSize * 2 - spacingSize;
+
+            const listBoxHeight = io.DisplaySize.y - allElementsHeight;
             const size: ig.ImVec2 = .{ .x = listBoxWidth, .y = listBoxHeight };
 
             ig.igSeparatorText("Cars");
@@ -146,6 +157,8 @@ export fn frame() void {
             launch() catch unreachable;
         }
     }
+
+    //ig.igShowDemoWindow(&showDemoWindow);
 
     //=== UI CODE ENDS HERE
 
@@ -231,8 +244,8 @@ pub fn main() void {
         .cleanup_cb = cleanup,
         .event_cb = event,
         .window_title = "Shakedown Rally Loader",
-        .width = 800,
-        .height = 600,
+        .width = 1200,
+        .height = 800,
         .icon = .{ .sokol_default = true },
         .logger = .{ .func = slog.func },
         .high_dpi = true,
