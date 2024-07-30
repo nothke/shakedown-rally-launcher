@@ -2,3 +2,7 @@ zig-*/
 .zig-*/
 
 res/
+
+NEngine-drive.exe
+imgui.ini
+log.txt
