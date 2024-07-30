@@ -186,13 +186,13 @@ fn launch() !void {
 
     // NEngine-drive.exe -car "cars/spec17/spec17_gravel.car.ini" -map "maps/finland/finland.map.ini"
 
-    const str = try std.fmt.allocPrint(alloc, "NEngine-drive.exe -car \"{s}\" -map \"{s}\"", .{
-        carList.items[@intCast(cari)].path,
-        mapList.items[@intCast(mapi)].path,
-    });
-    defer alloc.free(str);
+    // const str = try std.fmt.allocPrint(alloc, "NEngine-drive.exe -car \"{s}\" -map \"{s}\"", .{
+    //     carList.items[@intCast(cari)].path,
+    //     mapList.items[@intCast(mapi)].path,
+    // });
+    // defer alloc.free(str);
 
-    std.log.info("Launching: {s}", .{str});
+    // std.log.info("Launching: {s}", .{str});
 
     const argv = [_][]const u8{
         "NEngine-drive.exe",
