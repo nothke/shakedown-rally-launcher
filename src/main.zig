@@ -180,8 +180,8 @@ fn launch() !void {
         mapList.items[@intCast(mapi)].path,
     };
 
-    const runResult = try std.process.Child.run(.{ .allocator = alloc, .argv = &argv });
-    alloc.free(runResult.stdout);
+    var process = std.process.Child.init(&argv, alloc);
+    try process.spawn();
 }
 
 fn drawListBox(id: [:0]const u8, list: ItemList, size: ig.ImVec2, index: *i32) void {
