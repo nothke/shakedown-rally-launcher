@@ -69,12 +69,6 @@ fn findFiles() !void {
 
     try loadFiles(".car.ini", dir, &carList);
     try loadFiles(".map.ini", dir, &mapList);
-
-    std.log.info("-- Ended walking --", .{});
-
-    for (carList.items) |item| {
-        std.log.info("name: {s}, ---- full path: {s}", .{ item.name, item.path });
-    }
 }
 
 fn loadFiles(ext: []const u8, dir: std.fs.Dir, list: *ItemList) !void {
@@ -84,7 +78,7 @@ fn loadFiles(ext: []const u8, dir: std.fs.Dir, list: *ItemList) !void {
     while (try walker.next()) |entry| {
         if (entry.kind == .file) {
             if (std.mem.endsWith(u8, entry.path, ext)) {
-                std.log.info("Entry: path: {s}, basename: {s}, {}", .{ entry.path, entry.basename, entry.kind });
+                //std.log.info("Entry: path: {s}, basename: {s}, {}", .{ entry.path, entry.basename, entry.kind });
                 try list.append(.{
                     .name = try alloc.dupeZ(u8, entry.basename[0 .. entry.basename.len - ext.len]),
                     .path = try alloc.dupeZ(u8, entry.path),
@@ -136,7 +130,6 @@ export fn frame() void {
             // LISTBOX
             // checkbox - 1
             // button - 1
-            std.log.info("{}", .{borderSize});
             const allElementsHeight = 4 * ig.igGetTextLineHeightWithSpacing() + borderSize * 2 - spacingSize;
 
             const listBoxHeight = io.DisplaySize.y - allElementsHeight;
