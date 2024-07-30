@@ -69,6 +69,22 @@ fn findFiles() !void {
 
     try loadFiles(".car.ini", dir, &carList);
     try loadFiles(".map.ini", dir, &mapList);
+
+    // Make sure spec17 and monty are selected first
+
+    for (carList.items, 0..) |car, i| {
+        if (std.mem.eql(u8, car.name, "spec17")) {
+            cari = @intCast(i);
+            break;
+        }
+    }
+
+    for (mapList.items, 0..) |map, i| {
+        if (std.mem.eql(u8, map.name, "monty")) {
+            mapi = @intCast(i);
+            break;
+        }
+    }
 }
 
 fn loadFiles(ext: []const u8, dir: std.fs.Dir, list: *ItemList) !void {
