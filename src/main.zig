@@ -168,8 +168,20 @@ fn launch() !void {
         carList.items[@intCast(cari)].path,
         mapList.items[@intCast(mapi)].path,
     });
+    defer alloc.free(str);
 
     std.log.info("Launching: {s}", .{str});
+
+    const argv = [_][]const u8{
+        "NEngine-drive.exe",
+        "-car",
+        carList.items[@intCast(cari)].path,
+        "-map",
+        mapList.items[@intCast(mapi)].path,
+    };
+
+    const runResult = try std.process.Child.run(.{ .allocator = alloc, .argv = &argv });
+    alloc.free(runResult.stdout);
 }
 
 fn drawListBox(id: [:0]const u8, list: ItemList, size: ig.ImVec2, index: *i32) void {
