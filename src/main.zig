@@ -268,7 +268,12 @@ pub fn main() !void {
     _ = argsIter.skip();
 
     while (argsIter.next()) |arg| {
-        if (eql(u8, arg, "-r") or eql(u8, arg, "--resources-path")) {
+        if (eql(u8, arg, "-h")) {
+            std.log.info(" Launcher for Shakedown Rally by nothke. Written in Zig.", .{});
+            std.log.info(" \t-r or --resources-path: Specify where to resources path", .{});
+            std.log.info(" \t--mods-path: If set, here's where it'll look for cars and maps", .{});
+            return;
+        } else if (eql(u8, arg, "-r") or eql(u8, arg, "--resources-path")) {
             if (argsIter.next()) |resArg| {
                 corePath = resArg;
                 modsPath = resArg;
