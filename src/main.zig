@@ -32,6 +32,8 @@ var showFullPaths = false;
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 const alloc = gpa.allocator();
 
+var resPath: []const u8 = "res/";
+
 export fn init() void {
     // initialize sokol-gfx
     sg.setup(.{
@@ -59,10 +61,8 @@ fn findFiles() !void {
     carList = ItemList.init(alloc);
     mapList = ItemList.init(alloc);
 
-    const resPath = "res/";
-
     var dir = std.fs.cwd().openDir(resPath, .{ .iterate = true }) catch |err| switch (err) {
-        error.FileNotFound => @panic("Resource folder " ++ resPath ++ " not found"),
+        error.FileNotFound => std.debug.panic("Resource folder {s} not found", .{resPath}),
         else => return err,
     };
     defer dir.close();
@@ -196,6 +196,8 @@ fn launch() !void {
 
     const argv = [_][]const u8{
         "NEngine-drive.exe",
+        "-r",
+        resPath,
         "-car",
         carList.items[@intCast(cari)].path,
         "-map",
@@ -246,7 +248,31 @@ export fn event(ev: [*c]const sapp.Event) void {
     _ = simgui.handleEvent(ev.*);
 }
 
-pub fn main() void {
+const eql = std.mem.eql;
+
+pub fn main() !void {
+    var buffer: [1024]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const fbaAlloc = fba.allocator();
+
+    var argsIter = try std.process.ArgIterator.initWithAllocator(fbaAlloc);
+    defer argsIter.deinit();
+
+    // Skip Launcher.exe
+    _ = argsIter.skip();
+
+    while (argsIter.next()) |arg| {
+        if (eql(u8, arg, "-res")) {
+            if (argsIter.next()) |resArg| {
+                resPath = resArg;
+            } else {
+                std.log.warn("Bad res path argument, defaulting to /res", .{});
+            }
+        } else {
+            std.log.warn("Unknown argument: {s}", .{arg});
+        }
+    }
+
     sapp.run(.{
         .init_cb = init,
         .frame_cb = frame,
