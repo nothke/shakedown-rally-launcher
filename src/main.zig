@@ -32,7 +32,8 @@ var showFullPaths = false;
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 const alloc = gpa.allocator();
 
-var resPath: []const u8 = "res/";
+var corePath: []const u8 = "res/"; // where to look for core resources
+var modsPath: []const u8 = "res/"; // where to look for cars and maps
 
 export fn init() void {
     // initialize sokol-gfx
@@ -61,10 +62,10 @@ fn findFiles() !void {
     carList = ItemList.init(alloc);
     mapList = ItemList.init(alloc);
 
-    var dir = std.fs.cwd().openDir(resPath, .{ .iterate = true }) catch |err| switch (err) {
-        error.FileNotFound => std.debug.panic("Resource folder {s} not found", .{resPath}),
+    var dir = std.fs.cwd().openDir(modsPath, .{ .iterate = true }) catch |err| switch (err) {
+        error.FileNotFound => std.debug.panic("Resource folder {s} not found", .{modsPath}),
         else => {
-            std.log.err("Found problem with path: '{s}'.", .{resPath});
+            std.log.err("Found problem with path: '{s}'.", .{modsPath});
             return err;
         },
     };
@@ -200,7 +201,7 @@ fn launch() !void {
     const argv = [_][]const u8{
         "NEngine-drive.exe",
         "-r",
-        resPath,
+        corePath,
         "-car",
         carList.items[@intCast(cari)].path,
         "-map",
@@ -269,10 +270,13 @@ pub fn main() !void {
     while (argsIter.next()) |arg| {
         if (eql(u8, arg, "-r") or eql(u8, arg, "--resources-path")) {
             if (argsIter.next()) |resArg| {
-                resPath = resArg;
+                corePath = resArg;
+                modsPath = resArg;
             } else {
                 std.log.err("Resources path argument not found, defaulting to /res", .{});
             }
+        } else if (eql(u8, arg, "--mods-path")) {
+            modsPath = argsIter.next().?;
         } else {
             std.log.warn("Unknown argument: {s}", .{arg});
         }
