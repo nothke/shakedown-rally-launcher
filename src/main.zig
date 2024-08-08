@@ -63,7 +63,10 @@ fn findFiles() !void {
 
     var dir = std.fs.cwd().openDir(resPath, .{ .iterate = true }) catch |err| switch (err) {
         error.FileNotFound => std.debug.panic("Resource folder {s} not found", .{resPath}),
-        else => return err,
+        else => {
+            std.log.err("Found problem with path: '{s}'.", .{resPath});
+            return err;
+        },
     };
     defer dir.close();
 
@@ -253,27 +256,25 @@ const eql = std.mem.eql;
 pub fn main() !void {
 
     // Parse args
-    {
-        var buffer: [1024]u8 = undefined;
-        var fba = std.heap.FixedBufferAllocator.init(&buffer);
-        const fbaAlloc = fba.allocator();
+    var buffer: [1024]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const fbaAlloc = fba.allocator();
 
-        var argsIter = try std.process.ArgIterator.initWithAllocator(fbaAlloc);
-        defer argsIter.deinit();
+    var argsIter = try std.process.ArgIterator.initWithAllocator(fbaAlloc);
+    defer argsIter.deinit();
 
-        // Skip Launcher.exe
-        _ = argsIter.skip();
+    // Skip Launcher.exe
+    _ = argsIter.skip();
 
-        while (argsIter.next()) |arg| {
-            if (eql(u8, arg, "-r") or eql(u8, arg, "--resources-path")) {
-                if (argsIter.next()) |resArg| {
-                    resPath = resArg;
-                } else {
-                    std.log.err("Resources path argument not found, defaulting to /res", .{});
-                }
+    while (argsIter.next()) |arg| {
+        if (eql(u8, arg, "-r") or eql(u8, arg, "--resources-path")) {
+            if (argsIter.next()) |resArg| {
+                resPath = resArg;
             } else {
-                std.log.warn("Unknown argument: {s}", .{arg});
+                std.log.err("Resources path argument not found, defaulting to /res", .{});
             }
+        } else {
+            std.log.warn("Unknown argument: {s}", .{arg});
         }
     }
 
