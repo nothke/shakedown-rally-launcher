@@ -251,25 +251,29 @@ export fn event(ev: [*c]const sapp.Event) void {
 const eql = std.mem.eql;
 
 pub fn main() !void {
-    var buffer: [1024]u8 = undefined;
-    var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    const fbaAlloc = fba.allocator();
 
-    var argsIter = try std.process.ArgIterator.initWithAllocator(fbaAlloc);
-    defer argsIter.deinit();
+    // Parse args
+    {
+        var buffer: [1024]u8 = undefined;
+        var fba = std.heap.FixedBufferAllocator.init(&buffer);
+        const fbaAlloc = fba.allocator();
 
-    // Skip Launcher.exe
-    _ = argsIter.skip();
+        var argsIter = try std.process.ArgIterator.initWithAllocator(fbaAlloc);
+        defer argsIter.deinit();
 
-    while (argsIter.next()) |arg| {
-        if (eql(u8, arg, "-res")) {
-            if (argsIter.next()) |resArg| {
-                resPath = resArg;
+        // Skip Launcher.exe
+        _ = argsIter.skip();
+
+        while (argsIter.next()) |arg| {
+            if (eql(u8, arg, "-r") or eql(u8, arg, "--resources-path")) {
+                if (argsIter.next()) |resArg| {
+                    resPath = resArg;
+                } else {
+                    std.log.err("Resources path argument not found, defaulting to /res", .{});
+                }
             } else {
-                std.log.warn("Bad res path argument, defaulting to /res", .{});
+                std.log.warn("Unknown argument: {s}", .{arg});
             }
-        } else {
-            std.log.warn("Unknown argument: {s}", .{arg});
         }
     }
 
