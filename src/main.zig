@@ -248,6 +248,32 @@ export fn cleanup() void {
 }
 
 export fn event(ev: [*c]const sapp.Event) void {
+    if (ev.*.type == .KEY_DOWN) {
+        if (ev.*.key_code == .ENTER) {
+            launch() catch unreachable;
+        }
+        if (ev.*.key_code == .S) {
+            if (cari < carList.items.len - 1) {
+                cari += 1;
+            }
+        }
+        if (ev.*.key_code == .W) {
+            if (cari > 0) {
+                cari -= 1;
+            }
+        }
+        if (ev.*.key_code == .A) {
+            if (mapi > 0) {
+                mapi -= 1;
+            }
+        }
+        if (ev.*.key_code == .D) {
+            if (mapi < mapList.items.len - 1) {
+                mapi += 1;
+            }
+        }
+    }
+
     // forward input events to sokol-imgui
     _ = simgui.handleEvent(ev.*);
 }
