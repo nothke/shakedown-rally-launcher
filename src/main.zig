@@ -155,18 +155,18 @@ export fn frame() void {
             const listBoxHeight = io.DisplaySize.y - allElementsHeight;
             const size: ig.ImVec2 = .{ .x = listBoxWidth, .y = listBoxHeight };
 
-            ig.igSeparatorText("Cars");
+            ig.igSeparatorText("Cars UP/DOWN or W/S");
             drawListBox("##cars", carList, size, &cari);
 
             _ = ig.igTableSetColumnIndex(1);
 
-            ig.igSeparatorText("Maps");
+            ig.igSeparatorText("Maps LEFT/RIGHT or A/D");
             drawListBox("##maps", mapList, size, &mapi);
         }
 
         _ = ig.igCheckbox("Show full paths", &showFullPaths);
 
-        if (ig.igButton("Launch!", .{ .x = -std.math.floatMin(f32), .y = 0 })) {
+        if (ig.igButton("Launch! (Enter)", .{ .x = -std.math.floatMin(f32), .y = 0 })) {
             launch() catch unreachable;
         }
     }
@@ -248,6 +248,35 @@ export fn cleanup() void {
 }
 
 export fn event(ev: [*c]const sapp.Event) void {
+    if (ev.*.type == .KEY_DOWN) {
+        switch (ev.*.key_code) {
+            .ENTER => {
+                launch() catch unreachable;
+            },
+            .S, .DOWN => {
+                if (cari < carList.items.len - 1) {
+                    cari += 1;
+                }
+            },
+            .W, .UP => {
+                if (cari > 0) {
+                    cari -= 1;
+                }
+            },
+            .A, .LEFT => {
+                if (mapi > 0) {
+                    mapi -= 1;
+                }
+            },
+            .D, .RIGHT => {
+                if (mapi < mapList.items.len - 1) {
+                    mapi += 1;
+                }
+            },
+            else => {},
+        }
+    }
+
     // forward input events to sokol-imgui
     _ = simgui.handleEvent(ev.*);
 }
