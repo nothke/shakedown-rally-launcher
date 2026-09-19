@@ -35,6 +35,8 @@ var io: std.Io = undefined;
 var corePath: []const u8 = "res/"; // where to look for core resources
 var modsPath: []const u8 = "res/"; // where to look for cars and maps
 
+var gameExeFound = true;
+
 export fn init() void {
     // initialize sokol-gfx
     sg.setup(.{
@@ -55,7 +57,13 @@ export fn init() void {
     const imgui_io: *ig.ImGuiIO = ig.igGetIO();
     imgui_io.FontGlobalScale = 2;
 
-    findFiles() catch unreachable;
+    gameExeFound = checkGameExeExists();
+    findFiles() catch |err| std.log.err("Failed to load resources: {s}", .{@errorName(err)});
+}
+
+fn checkGameExeExists() bool {
+    std.Io.Dir.cwd().access(io, "NEngine-drive.exe", .{}) catch return false;
+    return true;
 }
 
 fn findFiles() !void {
@@ -63,10 +71,13 @@ fn findFiles() !void {
     mapList = .empty;
 
     var dir = std.Io.Dir.cwd().openDir(io, modsPath, .{ .iterate = true }) catch |err| switch (err) {
-        error.FileNotFound => std.debug.panic("Resource folder {s} not found", .{modsPath}),
+        error.FileNotFound => {
+            std.log.err("Resource folder '{s}' not found", .{modsPath});
+            return;
+        },
         else => {
             std.log.err("Found problem with path: '{s}'.", .{modsPath});
-            return err;
+            return;
         },
     };
     defer dir.close(io);
@@ -124,7 +135,15 @@ export fn frame() void {
         ig.ImGuiWindowFlags_NoResize |
         ig.ImGuiWindowFlags_NoCollapse |
         ig.ImGuiWindowFlags_NoTitleBar |
-        ig.ImGuiWindowFlags_NoSavedSettings;
+        ig.ImGuiWindowFlags_NoSavedSettings |
+        ig.ImGuiWindowFlags_NoBringToFrontOnFocus;
+
+    const overlayFlags =
+        ig.ImGuiWindowFlags_NoMove |
+        ig.ImGuiWindowFlags_NoResize |
+        ig.ImGuiWindowFlags_NoCollapse |
+        ig.ImGuiWindowFlags_NoTitleBar |
+        ig.ImGuiWindowFlags_NoFocusOnAppearing;
 
     const imgui_io: *ig.ImGuiIO = ig.igGetIO();
     const style: *ig.ImGuiStyle = ig.igGetStyle();
@@ -166,9 +185,46 @@ export fn frame() void {
 
         _ = ig.igCheckbox("Show full paths", &showFullPaths);
 
+        ig.igBeginDisabled(!gameExeFound);
         if (ig.igButtonEx("Launch! (Enter)", .{ .x = -std.math.floatMin(f32), .y = 0 })) {
-            launch() catch unreachable;
+            launch() catch |err| std.log.err("Failed to launch game: {s}", .{@errorName(err)});
         }
+        ig.igEndDisabled();
+    }
+
+    if (!gameExeFound) {
+        const message = "Game executable not found";
+        const quitMessage = "Press Enter to quit";
+
+        const messageSize = ig.igCalcTextSize(message);
+        const quitSize = ig.igCalcTextSize(quitMessage);
+        const maxWidth = @max(messageSize.x, quitSize.x);
+
+        const padX = style.WindowPadding.x * 2;
+        const padY = style.WindowPadding.y * 2;
+        const windowSize: ig.ImVec2 = .{
+            .x = maxWidth + padX * 2,
+            .y = messageSize.y + quitSize.y + style.ItemSpacing.y + padY * 2,
+        };
+        const windowPos: ig.ImVec2 = .{
+            .x = (imgui_io.DisplaySize.x - windowSize.x) * 0.5,
+            .y = (imgui_io.DisplaySize.y - windowSize.y) * 0.5,
+        };
+
+        ig.igSetNextWindowPos(windowPos, ig.ImGuiCond_Always);
+        ig.igSetNextWindowSize(windowSize, ig.ImGuiCond_Always);
+        ig.igSetNextWindowFocus();
+        _ = ig.igBegin("##exe-not-found", 0, overlayFlags);
+        defer ig.igEnd();
+
+        ig.igPushStyleColorImVec4(ig.ImGuiCol_Text, .{ .x = 1, .y = 1, .z = 1, .w = 1 });
+        defer ig.igPopStyleColor();
+
+        ig.igSetCursorPos(.{ .x = padX + (maxWidth - messageSize.x) * 0.5, .y = padY });
+        ig.igTextUnformatted(message);
+
+        ig.igSetCursorPos(.{ .x = padX + (maxWidth - quitSize.x) * 0.5, .y = padY + messageSize.y + style.ItemSpacing.y });
+        ig.igTextUnformatted(quitMessage);
     }
 
     //ig.igShowDemoWindow(&showDemoWindow);
@@ -248,7 +304,11 @@ export fn event(ev: [*c]const sapp.Event) void {
     if (ev.*.type == .KEY_DOWN) {
         switch (ev.*.key_code) {
             .ENTER => {
-                launch() catch unreachable;
+                if (gameExeFound) {
+                    launch() catch |err| std.log.err("Failed to launch game: {s}", .{@errorName(err)});
+                } else {
+                    sapp.requestQuit();
+                }
             },
             .S, .DOWN => {
                 if (cari < carList.items.len - 1) {
