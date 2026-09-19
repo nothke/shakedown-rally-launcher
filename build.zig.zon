@@ -1,13 +1,15 @@
 .{
-    .name = "sokol-zig-imgui-sample",
+    .name = .shakedown_rally_launcher,
     .version = "0.0.0",
+    .fingerprint = 0x35c5d69f126bb3e5,
     .dependencies = .{
         .sokol = .{
-            .url = "git+https://github.com/floooh/sokol-zig.git#d9f3ef983b7021417cc91bd5788cd925ca06aa83",
-            .hash = "12200a472b4f1a3a6db1002f39f10ae0cccf58ada45bf25ddc5fd48384dd187f55ea",
+            .url = "git+https://github.com/floooh/sokol-zig.git#e371234960812882406a296c4f3154321a16ee4d",
+            .hash = "sokol-0.1.0-pb1HK0kUQABqwuelY7BmmQmAm-jLBZKJ7uyoxkdS49Ib",
         },
         .cimgui = .{
-            .path = "deps/cimgui",
+            .url = "git+https://github.com/floooh/dcimgui.git#3c2b41a9333b1195e2c2f8ce6a2d3e50660a73bf",
+            .hash = "cimgui-0.1.0-44ClkR8dmgDqqnfloyLE1bUAtl4zSKTT1wxaHSEC0ikV",
         },
     },
     .paths = .{""},

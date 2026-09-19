@@ -3,13 +3,16 @@ const Build = std.Build;
 const OptimizeMode = std.builtin.OptimizeMode;
 const ResolvedTarget = Build.ResolvedTarget;
 const Dependency = Build.Dependency;
-const sokol = @import("sokol");
+const cimgui = @import("cimgui");
 
 pub fn build(b: *Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    // note that the sokol dependency is built with `.with_imgui_sokol = true`
+    // get the matching Zig module name and C header search path for vanilla imgui
+    const cimgui_conf = cimgui.getConfig(false);
+
+    // note that the sokol dependency is built with `.with_sokol_imgui = true`
     const dep_sokol = b.dependency("sokol", .{
         .target = target,
         .optimize = optimize,
@@ -21,40 +24,41 @@ pub fn build(b: *Build) !void {
     });
 
     // inject the cimgui header search path into the sokol C library compile step
-    const cimgui_root = dep_cimgui.namedWriteFiles("cimgui").getDirectory();
-    dep_sokol.artifact("sokol_clib").addIncludePath(cimgui_root);
+    dep_sokol.artifact("sokol_clib").root_module.addIncludePath(dep_cimgui.path(cimgui_conf.include_dir));
 
-    // from here on different handling for native vs wasm builds
-    try buildNative(b, target, optimize, dep_sokol, dep_cimgui);
+    try buildNative(b, target, optimize, dep_sokol, dep_cimgui, cimgui_conf.module_name);
 }
 
-fn buildNative(b: *Build, target: ResolvedTarget, optimize: OptimizeMode, dep_sokol: *Dependency, dep_cimgui: *Dependency) !void {
-    const demo = b.addExecutable(.{
-        .name = if (optimize != .Debug) "Launcher" else "Launcher-Debug",
+fn mainModule(b: *Build, target: ResolvedTarget, optimize: OptimizeMode, dep_sokol: *Dependency, dep_cimgui: *Dependency, cimgui_module: []const u8) *Build.Module {
+    return b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "sokol", .module = dep_sokol.module("sokol") },
+            .{ .name = "cimgui", .module = dep_cimgui.module(cimgui_module) },
+        },
     });
-    demo.root_module.addImport("sokol", dep_sokol.module("sokol"));
-    demo.root_module.addImport("cimgui", dep_cimgui.module("cimgui"));
+}
+
+fn buildNative(b: *Build, target: ResolvedTarget, optimize: OptimizeMode, dep_sokol: *Dependency, dep_cimgui: *Dependency, cimgui_module: []const u8) !void {
+    const demo = b.addExecutable(.{
+        .name = if (optimize != .Debug) "Launcher" else "Launcher-Debug",
+        .root_module = mainModule(b, target, optimize, dep_sokol, dep_cimgui, cimgui_module),
+    });
 
     if (optimize != .Debug)
         demo.subsystem = .Windows;
 
     const exe_check = b.addExecutable(.{
         .name = "check_step",
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = mainModule(b, target, optimize, dep_sokol, dep_cimgui, cimgui_module),
     });
-
-    exe_check.root_module.addImport("sokol", dep_sokol.module("sokol"));
-    exe_check.root_module.addImport("cimgui", dep_cimgui.module("cimgui"));
 
     const check = b.step("check", "Check if project compiles");
     check.dependOn(&exe_check.step);
 
     b.installArtifact(demo);
-    var runStep = b.step("run", "Run demo");
+    const runStep = b.step("run", "Run Launcher");
     runStep.dependOn(&b.addRunArtifact(demo).step);
 }

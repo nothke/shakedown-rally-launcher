@@ -29,8 +29,8 @@ var mapi: i32 = -1;
 var showDemoWindow = true;
 var showFullPaths = false;
 
-var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-const alloc = gpa.allocator();
+var alloc: std.mem.Allocator = undefined;
+var io: std.Io = undefined;
 
 var corePath: []const u8 = "res/"; // where to look for core resources
 var modsPath: []const u8 = "res/"; // where to look for cars and maps
@@ -52,24 +52,24 @@ export fn init() void {
         .clear_value = .{ .r = 0.0, .g = 0.5, .b = 1.0, .a = 1.0 },
     };
 
-    const io: *ig.ImGuiIO = ig.igGetIO();
-    io.FontGlobalScale = 2;
+    const imgui_io: *ig.ImGuiIO = ig.igGetIO();
+    imgui_io.FontGlobalScale = 2;
 
     findFiles() catch unreachable;
 }
 
 fn findFiles() !void {
-    carList = ItemList.init(alloc);
-    mapList = ItemList.init(alloc);
+    carList = .empty;
+    mapList = .empty;
 
-    var dir = std.fs.cwd().openDir(modsPath, .{ .iterate = true }) catch |err| switch (err) {
+    var dir = std.Io.Dir.cwd().openDir(io, modsPath, .{ .iterate = true }) catch |err| switch (err) {
         error.FileNotFound => std.debug.panic("Resource folder {s} not found", .{modsPath}),
         else => {
             std.log.err("Found problem with path: '{s}'.", .{modsPath});
             return err;
         },
     };
-    defer dir.close();
+    defer dir.close(io);
 
     try loadFiles(".car.ini", dir, &carList);
     try loadFiles(".map.ini", dir, &mapList);
@@ -91,15 +91,15 @@ fn findFiles() !void {
     }
 }
 
-fn loadFiles(ext: []const u8, dir: std.fs.Dir, list: *ItemList) !void {
+fn loadFiles(ext: []const u8, dir: std.Io.Dir, list: *ItemList) !void {
     var walker = try dir.walk(alloc);
     defer walker.deinit();
 
-    while (try walker.next()) |entry| {
+    while (try walker.next(io)) |entry| {
         if (entry.kind == .file) {
             if (std.mem.endsWith(u8, entry.path, ext)) {
                 //std.log.info("Entry: path: {s}, basename: {s}, {}", .{ entry.path, entry.basename, entry.kind });
-                try list.append(.{
+                try list.append(alloc, .{
                     .name = try alloc.dupeZ(u8, entry.basename[0 .. entry.basename.len - ext.len]),
                     .path = try alloc.dupeZ(u8, entry.path),
                 });
@@ -126,22 +126,22 @@ export fn frame() void {
         ig.ImGuiWindowFlags_NoTitleBar |
         ig.ImGuiWindowFlags_NoSavedSettings;
 
-    const io: *ig.ImGuiIO = ig.igGetIO();
+    const imgui_io: *ig.ImGuiIO = ig.igGetIO();
     const style: *ig.ImGuiStyle = ig.igGetStyle();
     const borderSize = style.WindowPadding.y;
     const spacingSize = style.ItemSpacing.y;
 
     {
-        ig.igSetNextWindowPos(vec2Zero, ig.ImGuiCond_Once, vec2Zero);
-        ig.igSetNextWindowSize(io.DisplaySize, ig.ImGuiCond_Always);
+        ig.igSetNextWindowPos(vec2Zero, ig.ImGuiCond_Once);
+        ig.igSetNextWindowSize(imgui_io.DisplaySize, ig.ImGuiCond_Always);
         _ = ig.igBegin("Hello Dear ImGui!", 0, windowFlags);
         defer ig.igEnd();
 
         {
-            _ = ig.igBeginTable("carmapstable", 2, 0, vec2Zero, 0);
+            _ = ig.igBeginTable("carmapstable", 2, 0);
             defer ig.igEndTable();
 
-            ig.igTableNextRow(0, 0);
+            ig.igTableNextRow();
             _ = ig.igTableSetColumnIndex(0);
 
             const listBoxWidth = -std.math.floatMin(f32);
@@ -152,7 +152,7 @@ export fn frame() void {
             // button - 1
             const allElementsHeight = 4 * ig.igGetTextLineHeightWithSpacing() + borderSize * 2 - spacingSize;
 
-            const listBoxHeight = io.DisplaySize.y - allElementsHeight;
+            const listBoxHeight = imgui_io.DisplaySize.y - allElementsHeight;
             const size: ig.ImVec2 = .{ .x = listBoxWidth, .y = listBoxHeight };
 
             ig.igSeparatorText("Cars UP/DOWN or W/S");
@@ -166,7 +166,7 @@ export fn frame() void {
 
         _ = ig.igCheckbox("Show full paths", &showFullPaths);
 
-        if (ig.igButton("Launch! (Enter)", .{ .x = -std.math.floatMin(f32), .y = 0 })) {
+        if (ig.igButtonEx("Launch! (Enter)", .{ .x = -std.math.floatMin(f32), .y = 0 })) {
             launch() catch unreachable;
         }
     }
@@ -208,8 +208,7 @@ fn launch() !void {
         mapList.items[@intCast(mapi)].path,
     };
 
-    var process = std.process.Child.init(&argv, alloc);
-    try process.spawn();
+    _ = try std.process.spawn(io, .{ .argv = &argv });
 }
 
 fn drawListBox(id: [:0]const u8, list: ItemList, size: ig.ImVec2, index: *i32) void {
@@ -217,7 +216,7 @@ fn drawListBox(id: [:0]const u8, list: ItemList, size: ig.ImVec2, index: *i32) v
         for (list.items, 0..) |item, i| {
             const isSelected = i == index.*;
             const label = if (showFullPaths) item.path else item.name;
-            const shouldBeSelected = ig.igSelectable_Bool(label, isSelected, 0, vec2Zero);
+            const shouldBeSelected = ig.igSelectableEx(label, isSelected, 0, vec2Zero);
 
             if (shouldBeSelected)
                 index.* = @intCast(i);
@@ -241,10 +240,8 @@ export fn cleanup() void {
         alloc.free(item.path);
     }
 
-    carList.deinit();
-    mapList.deinit();
-
-    _ = gpa.deinit();
+    carList.deinit(alloc);
+    mapList.deinit(alloc);
 }
 
 export fn event(ev: [*c]const sapp.Event) void {
@@ -283,14 +280,12 @@ export fn event(ev: [*c]const sapp.Event) void {
 
 const eql = std.mem.eql;
 
-pub fn main() !void {
+pub fn main(app: std.process.Init) !void {
+    alloc = app.gpa;
+    io = app.io;
 
     // Parse args
-    var buffer: [1024]u8 = undefined;
-    var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    const fbaAlloc = fba.allocator();
-
-    var argsIter = try std.process.ArgIterator.initWithAllocator(fbaAlloc);
+    var argsIter = try std.process.Args.Iterator.initAllocator(app.minimal.args, alloc);
     defer argsIter.deinit();
 
     // Skip Launcher.exe

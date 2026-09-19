@@ -4,4 +4,4 @@ Just a small car and map loader for Shakedown since it doesn't have in-game swit
 
 Uses Sokol Zig and Dear ImGui. Based on the [sokol imgui sample](https://github.com/floooh/sokol-zig-imgui-sample) repo.
 
-To build just run `zig build run`. Built with zig 0.13.0
+To build just run `zig build run`. Built with zig 0.16.0
